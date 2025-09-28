@@ -33,10 +33,14 @@ class EmbeddingClient {
     }
   }
 
-  async searchSimilar(query, k = 5) {
+  async searchSimilar(query, k = 5, similarityMetric = 'cosine') {
     try {
       const response = await this.client.get('/search', {
-        params: { query, k }
+        params: { 
+          query, 
+          k, 
+          similarity_metric: similarityMetric 
+        }
       });
       
       return response.data.results;

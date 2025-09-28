@@ -10,7 +10,7 @@ echo "=========================="
 
 # Configuration
 EMBEDDING_SERVICE_URL="http://localhost:8000"
-ORCHESTRATOR_URL="http://localhost:3000"
+ORCHESTRATOR_URL="http://localhost:5000"
 
 # Colors for output
 RED='\033[0;31m'

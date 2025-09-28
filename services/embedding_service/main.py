@@ -2,13 +2,34 @@ import os
 import time
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from starlette.responses import Response
 from dotenv import load_dotenv
 
 from models import EmbedRequest, BulkEmbedRequest, EmbedResponse, BulkEmbedResponse, HealthResponse
 from embedding_service import EmbeddingServiceFactory
 from vector_store import VectorStore
+
+# Prometheus metrics
+REQUEST_COUNT = Counter(
+    'embedding_service_requests_total', 
+    'Total requests to embedding service',
+    ['method', 'endpoint', 'status']
+)
+
+REQUEST_LATENCY = Histogram(
+    'embedding_service_request_duration_seconds',
+    'Request latency in seconds',
+    ['method', 'endpoint']
+)
+
+ERROR_COUNT = Counter(
+    'embedding_service_errors_total',
+    'Total errors in embedding service',
+    ['endpoint', 'error_type']
+)
 
 # Load environment variables
 load_dotenv()
@@ -71,6 +92,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Metrics middleware
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    start_time = time.time()
+    
+    # Process request
+    response = await call_next(request)
+    
+    # Record metrics
+    process_time = time.time() - start_time
+    REQUEST_LATENCY.labels(
+        method=request.method,
+        endpoint=request.url.path
+    ).observe(process_time)
+    
+    REQUEST_COUNT.labels(
+        method=request.method,
+        endpoint=request.url.path,
+        status=response.status_code
+    ).inc()
+    
+    return response
+
 def get_embedding_service():
     return embedding_service
 
@@ -85,6 +129,11 @@ async def health_check():
         service="embedding_service",
         version="1.0.0"
     )
+
+@app.get("/metrics")
+async def get_metrics():
+    """Prometheus metrics endpoint"""
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 @app.post("/embed", response_model=EmbedResponse)
 async def embed_document(
@@ -116,6 +165,7 @@ async def embed_document(
         )
         
     except Exception as e:
+        ERROR_COUNT.labels(endpoint="/embed", error_type=type(e).__name__).inc()
         logger.error(f"Error processing document {request.id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -178,6 +228,7 @@ async def bulk_embed_documents(
 async def search_similar_documents(
     query: str,
     k: int = 5,
+    similarity_metric: str = "cosine",
     embed_service=Depends(get_embedding_service),
     store=Depends(get_vector_store)
 ):
@@ -185,17 +236,29 @@ async def search_similar_documents(
     try:
         start_time = time.time()
         
+        # Validate similarity metric
+        if similarity_metric not in ["cosine", "dot_product"]:
+            raise HTTPException(
+                status_code=400, 
+                detail="similarity_metric must be 'cosine' or 'dot_product'"
+            )
+        
         # Generate query embedding
         query_embedding = await embed_service.get_embedding(query)
         
         # Perform similarity search
-        results = await store.similarity_search(query_embedding, k=k)
+        results = await store.similarity_search(
+            query_embedding, 
+            k=k, 
+            similarity_metric=similarity_metric
+        )
         
         processing_time = time.time() - start_time
-        logger.info(f"Search completed in {processing_time:.3f}s, found {len(results)} results")
+        logger.info(f"Search completed with {similarity_metric} in {processing_time:.3f}s, found {len(results)} results")
         
         return {
             "query": query,
+            "similarity_metric": similarity_metric,
             "results": results,
             "processing_time_ms": processing_time * 1000
         }

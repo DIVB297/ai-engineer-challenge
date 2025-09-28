@@ -185,11 +185,12 @@ class VectorStore:
             doc["_id"] = str(doc["_id"])
         return doc
 
-    async def similarity_search(self, query_embedding: List[float], k: int = 5, filter_dict: dict = None):
-        """Perform cosine similarity search using Atlas Vector Search or fallback to manual calculation"""
+    async def similarity_search(self, query_embedding, k=5, similarity_metric="cosine"):
+        """Perform similarity search using MongoDB Atlas Vector Search"""
         try:
-            if self.vector_search_available:
-                # Use MongoDB Atlas Vector Search
+            # Configure search based on similarity metric
+            if similarity_metric == "cosine":
+                # Use default Atlas vector search (cosine similarity)
                 pipeline = [
                     {
                         "$vectorSearch": {
@@ -205,56 +206,59 @@ class VectorStore:
                             "id": 1,
                             "text": 1,
                             "metadata": 1,
-                            "score": {"$meta": "vectorSearchScore"},
-                            "_id": 0  # Exclude _id to avoid ObjectId serialization issues
+                            "score": {"$meta": "vectorSearchScore"}
                         }
                     }
                 ]
-                
-                # Add filter if provided
-                if filter_dict:
-                    pipeline.insert(1, {"$match": filter_dict})
-                
-                cursor = self.collection.aggregate(pipeline)
-                results = await cursor.to_list(length=k)
-                
-                # Clean up results to ensure JSON serializability
-                cleaned_results = []
-                for result in results:
-                    cleaned_result = {
-                        "id": result.get("id"),
-                        "text": result.get("text"),
-                        "metadata": result.get("metadata", {}),
-                        "score": float(result.get("score", 0.0))
+            elif similarity_metric == "dot_product":
+                # Use aggregation pipeline for dot product similarity
+                pipeline = [
+                    {
+                        "$addFields": {
+                            "score": {
+                                "$reduce": {
+                                    "input": {"$zip": {"inputs": ["$embedding", query_embedding]}},
+                                    "initialValue": 0,
+                                    "in": {"$add": ["$$value", {"$multiply": [{"$arrayElemAt": ["$$this", 0]}, {"$arrayElemAt": ["$$this", 1]}]}]}
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "$sort": {"score": -1}
+                    },
+                    {
+                        "$limit": k
+                    },
+                    {
+                        "$project": {
+                            "id": 1,
+                            "text": 1,
+                            "metadata": 1,
+                            "score": 1
+                        }
                     }
-                    cleaned_results.append(cleaned_result)
-                
-                return cleaned_results
+                ]
             else:
-                # Fallback to manual cosine similarity
-                query = filter_dict or {}
-                projection = {"_id": 0, "id": 1, "text": 1, "embedding": 1, "metadata": 1}  # Exclude _id
-                cursor = self.collection.find(query, projection)
-                documents = await cursor.to_list(length=None)
-                
-                # Calculate similarities
-                results = []
-                for doc in documents:
-                    if "embedding" in doc:
-                        similarity = self.cosine_similarity(query_embedding, doc["embedding"])
-                        results.append({
-                            "id": doc.get("id"),
-                            "text": doc.get("text"),
-                            "metadata": doc.get("metadata", {}),
-                            "score": float(similarity)
-                        })
-                
-                # Sort by similarity score (descending) and return top k
-                results.sort(key=lambda x: x["score"], reverse=True)
-                return results[:k]
-                
+                raise ValueError(f"Unsupported similarity metric: {similarity_metric}")
+
+            cursor = self.collection.aggregate(pipeline)
+            results = []
+            
+            async for doc in cursor:
+                results.append({
+                    "id": doc["id"],
+                    "text": doc["text"],
+                    "score": doc["score"],
+                    "metadata": doc.get("metadata", {}),
+                    "similarity_metric": similarity_metric
+                })
+
+            logger.info(f"Vector search completed with {similarity_metric}, found {len(results)} results")
+            return results
+
         except Exception as e:
-            logger.error(f"Error performing similarity search: {e}")
+            logger.error(f"Error during similarity search: {e}")
             raise
     
     async def delete_document(self, doc_id: str):

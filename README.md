@@ -52,9 +52,11 @@ ai-engineer-challenge/
 │       ├── package.json          # Node.js dependencies
 │       └── Dockerfile           # Container config
 ├── scripts/
-│   ├── lora_qa_demo.py          # Complete LoRA training & inference demo
+│   ├── train_adapter.py         # Complete LoRA training & inference demo
 │   ├── use_lora_model.py        # Interactive LoRA model usage script
 │   ├── ingest_data.py           # Data ingestion pipeline
+│   ├── quick_multi_vector_demo.py  # Simple multi-vector similarity demo
+│   ├── test_multi_vector.py     # Comprehensive multi-vector testing
 │   └── requirements.txt         # Python ML dependencies
 ├── data/
 │   ├── sample_documents.json     # Demo dataset (20 docs)
@@ -80,7 +82,6 @@ ai-engineer-challenge/
 cd ai-engineer-challenge
 
 # Set up environment variables (.env file)
-JINA_API_KEY=your_jina_api_key_here          # Get from https://jina.ai
 OPENAI_API_KEY=your_openai_api_key_here      # Get from https://openai.com
 MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/  # MongoDB Atlas URI
 MONGODB_DATABASE=rag_system
@@ -94,7 +95,7 @@ docker-compose -f docker-compose.atlas.yml up -d
 
 # Check service health
 curl http://localhost:8000/health  # Embedding service
-curl http://localhost:3000/health  # Orchestrator
+curl http://localhost:5000/health  # Orchestrator
 
 # View logs
 docker-compose logs -f
@@ -109,6 +110,71 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install LoRA dependencies
 pip install torch transformers peft datasets
 ```
+
+### 4. Development with React Demo UI
+```bash
+# Start backend services
+docker-compose up -d
+
+# Install and run React demo (in a new terminal)
+cd demo-ui
+npm install
+npm start
+
+# Access at http://localhost:3000 (connects to backend on localhost:5000)
+# Backend services run on: http://localhost:5000 (orchestrator), http://localhost:8000 (embedding)
+```
+
+## 🚀 Deployment Options
+
+### Docker Compose (Recommended for Development)
+```bash
+# Standard deployment
+docker-compose up -d
+
+# With MongoDB Atlas
+docker-compose -f docker-compose.atlas.yml up -d
+
+# Production build
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### AWS Deployment
+Comprehensive AWS deployment guide available: [AWS Deployment Guide](docs/aws-deployment-guide.md)
+
+#### Quick AWS Options:
+- **AWS Lambda**: Serverless, cost-effective for variable workloads
+- **Amazon ECS**: Containerized, consistent performance
+- **EC2 Instances**: Full control, high performance
+- **SageMaker**: ML-optimized for model-heavy workloads
+
+```bash
+# Example: Deploy to AWS Lambda
+cd services/embedding_service
+serverless deploy
+
+cd services/orchestrator
+serverless deploy
+```
+
+### Local Development
+```bash
+# Run services individually
+cd services/embedding_service
+python main.py
+
+cd services/orchestrator
+npm start
+```
+
+### Production Considerations
+- Use environment-specific configuration files
+- Set up proper logging and monitoring
+- Configure SSL/TLS certificates
+- Implement rate limiting and authentication
+- Use managed database services (MongoDB Atlas recommended)
+
+---
 
 ## 📚 API Specifications
 
@@ -155,7 +221,12 @@ Content-Type: application/json
 
 #### 🔎 Similarity Search (Used by RAG)
 ```bash
+# Default cosine similarity
 GET /search?query=What%20is%20machine%20learning&k=3
+
+# Specify similarity metric
+GET /search?query=What%20is%20machine%20learning&k=3&similarity_metric=cosine
+GET /search?query=What%20is%20machine%20learning&k=3&similarity_metric=dot_product
 ```
 **Response:**
 ```json
@@ -169,11 +240,12 @@ GET /search?query=What%20is%20machine%20learning&k=3
       "metadata": {}
     }
   ],
-  "processing_time_ms": 245
+  "processing_time_ms": 245,
+  "similarity_metric": "cosine"
 }
 ```
 
-### Orchestrator Service (Port 3000)
+### Orchestrator Service (Port 5000)
 
 #### 🔍 Health Check
 ```bash
@@ -204,9 +276,16 @@ Content-Type: application/json
 {
   "user_id": "user_123",
   "query": "What is machine learning?",
-  "k": 3
+  "k": 3,
+  "similarity_metric": "cosine"
 }
 ```
+
+**Available Parameters:**
+- `user_id`: Unique identifier for the user
+- `query`: The question or prompt to process
+- `k`: Number of similar documents to retrieve (default: 5)
+- `similarity_metric`: Either "cosine" or "dot_product" (default: "cosine")
 **Response:**
 ```json
 {
@@ -256,13 +335,23 @@ INFO - ✅ Ingestion completed: 42 chunks from 20 documents
 
 #### 2. Query RAG System
 ```bash
-# Ask a context-aware question
-curl -X POST http://localhost:3000/chat \
+# Ask a context-aware question (default cosine similarity)
+curl -X POST http://localhost:5000/chat \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "demo_user",
     "query": "What is machine learning and how does it work?",
     "k": 3
+  }'
+
+# Or specify similarity metric explicitly
+curl -X POST http://localhost:5000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "demo_user",
+    "query": "What is machine learning and how does it work?",
+    "k": 3,
+    "similarity_metric": "dot_product"
   }'
 ```
 **Expected Response:**
@@ -272,7 +361,7 @@ curl -X POST http://localhost:3000/chat \
   "source_docs": [
     {
       "id": "ml_basics_1_chunk_0", 
-      "text": "Machine learning is a subset of AI that enables computers...",
+      "text": "Machine learning is a subset of AI that enables computers to learn...",
       "score": 0.8542
     }
   ],
@@ -287,7 +376,7 @@ curl -X POST http://localhost:3000/chat \
 #### 3. Train and Use LoRA Adapter
 ```bash
 # Train LoRA adapter on toy QA data
-python scripts/lora_qa_demo.py
+python scripts/train_adapter.py
 ```
 **Expected Output:**
 ```
@@ -306,7 +395,38 @@ Answer:
 Generated: Python is a high-level programming language known for its simplicity and readability.
 ```
 
-#### 4. Interactive LoRA Usage
+#### 4. Test Multi-Vector Similarity
+```bash
+# Quick demo of cosine vs dot product similarity
+python scripts/quick_multi_vector_demo.py
+
+# Comprehensive multi-vector similarity testing
+python scripts/test_multi_vector.py
+```
+
+**Expected Output (Quick Demo):**
+```
+🔬 Multi-Vector Similarity Demo
+==================================================
+Query: What is machine learning?
+
+📊 Testing Cosine Similarity...
+✅ Success! (1.23s)
+   Sources found: 3
+   Score #1: 0.8542
+
+⚡ Testing Dot Product Similarity...
+✅ Success! (1.18s)
+   Sources found: 3
+   Score #1: 12.4837
+
+📈 Comparison Summary:
+   Cosine similarity timing: 1.23s
+   Dot product timing: 1.18s
+   Performance difference: 0.05s
+```
+
+#### 5. Interactive LoRA Usage
 ```bash
 # Use trained LoRA model interactively
 python scripts/use_lora_model.py
@@ -387,115 +507,190 @@ orchestrator:
 4. **Model Optimization**: Use faster models (GPT-3.5-turbo vs GPT-4)
 5. **Async Processing**: Non-blocking operations where possible
 
-## 🧪 Testing the System
+## 🧪 Testing
 
-### Health Checks
+### Unit Tests
+
+#### Python (Embedding Service)
 ```bash
-# Check all services are running
-curl http://localhost:8000/health  # Embedding service
-curl http://localhost:3000/health  # Orchestrator
+# Run Python unit tests
+cd services/embedding_service
+python -m pytest tests/ -v
 
-# Expected responses: {"status": "healthy", ...}
+# Run with coverage
+python -m pytest tests/ --cov=. --cov-report=html
 ```
 
-### Manual API Testing
+#### Node.js (Orchestrator)
 ```bash
-# Test document search directly
-curl "http://localhost:8000/search?query=artificial%20intelligence&k=2"
+# Run Node.js unit tests
+cd services/orchestrator
+npm test
 
-# Test RAG with different questions
-curl -X POST http://localhost:3000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "test", "query": "How does deep learning work?", "k": 2}'
+# Run with coverage
+npm run test:coverage
+```
+
+### Integration Tests
+
+#### Multi-Vector Similarity Testing
+
+**Quick Demo Script (`quick_multi_vector_demo.py`):**
+```bash
+# Start services first
+docker-compose up -d
+
+# Run quick demo (shows basic differences)
+python scripts/quick_multi_vector_demo.py
+```
+
+**Features:**
+- Simple comparison between cosine and dot product similarity
+- Performance timing analysis
+- Score comparison with explanations
+- Direct embedding service testing
+- User-friendly output with emojis and clear explanations
+
+**Comprehensive Testing Script (`test_multi_vector.py`):**
+```bash
+# Run detailed multi-vector similarity comparison
+python scripts/test_multi_vector.py
+```
+
+**Features:**
+- Async testing with multiple queries
+- Statistical analysis of score differences
+- Performance benchmarking
+- Detailed JSON results output
+- Both RAG pipeline and direct embedding service testing
+
+**Testing Scripts Output:**
+- Performance comparison between cosine and dot product similarity
+- Score distribution analysis
+- Timing benchmarks with millisecond precision
+- Detailed JSON results with statistical analysis
+- Direct embedding service vs. full RAG pipeline comparison
+
+#### React Demo UI Testing
+```bash
+# Start services
+docker-compose up -d
+
+# Install and run React demo
+cd demo-ui
+npm install
+npm start
+
+# Test features:
+# - Chat functionality
+# - Similarity metric selection
+# - Source document display
+# - Performance metrics
+```
+
+### CI/CD Testing
+
+The GitHub Actions pipeline automatically runs:
+- Python linting (flake8)
+- Python unit tests (pytest)
+- Node.js linting (eslint)
+- Node.js unit tests (Jest)
+- Docker image builds
+- Security scanning (Trivy)
+
+```yaml
+# Trigger pipeline
+git push origin main
+
+# Or run specific workflow
+gh workflow run ci.yml
 ```
 
 ### Performance Testing
+
 ```bash
-# Monitor response times
-time curl -X POST http://localhost:3000/chat \
+# Load test the chat endpoint with cosine similarity
+curl -X POST http://localhost:5000/chat \
   -H "Content-Type: application/json" \
-  -d '{"user_id": "test", "query": "What is supervised learning?", "k": 3}'
+  -d '{
+    "user_id": "test_user",
+    "query": "What is machine learning?",
+    "k": 5,
+    "similarity_metric": "cosine"
+  }'
 
-# Expected: ~4-6 seconds total response time
+# Test with dot product similarity
+curl -X POST http://localhost:5000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "test_user",
+    "query": "What is machine learning?",
+    "k": 5,
+    "similarity_metric": "dot_product"
+  }'
+
+# Run comprehensive multi-vector performance tests
+python scripts/test_multi_vector.py
 ```
 
-## 🔧 Configuration
+### Monitoring Tests
 
-### Required Environment Variables
 ```bash
-# API Keys (required)
-JINA_API_KEY=your_jina_api_key_here          # Get from https://jina.ai
-OPENAI_API_KEY=your_openai_api_key_here      # Get from https://openai.com
+# Check Prometheus metrics
+curl http://localhost:8000/metrics  # Embedding service
+curl http://localhost:5000/metrics  # Orchestrator
 
-# MongoDB Atlas (required)
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/
-MONGODB_DATABASE=rag_system
-MONGODB_COLLECTION=embeddings
-
-# Optional settings (have defaults)
-LLM_MODEL=gpt-3.5-turbo
-CHUNK_SIZE=500
-CHUNK_OVERLAP=50
-```
-
-### Data Processing Settings
-- **Chunk Size**: 500 characters per document chunk
-- **Chunk Overlap**: 50 characters (10% overlap for context continuity)
-- **Vector Dimensions**: 1024 (Jina AI embeddings)
-- **Similarity**: Cosine similarity for vector search
-
-## 📁 Project Structure
-
-```
-ai-engineer-challenge/
-├── services/
-│   ├── embedding_service/          # Python FastAPI service
-│   │   ├── main.py                # FastAPI app with /health, /bulk_embed, /search
-│   │   ├── models.py              # Pydantic request/response models  
-│   │   ├── embedding_service.py   # Jina AI integration
-│   │   ├── vector_store.py        # MongoDB Atlas vector operations
-│   │   └── Dockerfile            # Container config
-│   └── orchestrator/              # Node.js Express service  
-│       ├── src/
-│       │   ├── app.js            # Express app with /health, /chat
-│       │   ├── embeddingClient.js # Calls embedding service
-│       │   └── llmService.js     # OpenAI API integration
-│       └── Dockerfile           # Container config
-├── scripts/
-│   ├── lora_qa_demo.py          # Complete LoRA training & inference 
-│   ├── use_lora_model.py        # Interactive LoRA usage
-│   ├── ingest_data.py           # Document ingestion pipeline
-│   └── toy_qa_lora_model/       # Trained LoRA adapter (1.6MB)
-├── data/
-│   └── sample_documents.json     # 20 AI/ML documents for demo
-├── docker-compose.atlas.yml      # Multi-service orchestration
-└── README.md                     # This file
-```
-
-## � Common Issues & Solutions
-
-### LoRA Training Issues
-```bash
-# If model not found:
-python scripts/lora_qa_demo.py  # Train model first
-
-# If memory issues:
-# Reduce batch_size in lora_qa_demo.py from 2 to 1
-```
-
-### RAG System Issues  
-```bash
-# If services won't start:
-docker-compose -f docker-compose.atlas.yml down
-docker-compose -f docker-compose.atlas.yml up -d
-
-# If no search results:
-# Check if documents were ingested successfully
-python scripts/ingest_data.py data/sample_documents.json
+# Verify metric collection
+grep "http_requests_total" logs/combined.log
 ```
 
 ---
 
 **System Status**: ✅ Fully functional RAG system with LoRA fine-tuning capabilities
 
-**Key Features**: Document ingestion, vector search, context-aware Q&A, LoRA adapter training, interactive model usage
+## ✨ Key Features
+
+- **🔧 LoRA Fine-tuning**: Complete PEFT adapter training with distilGPT-2, toy QA dataset, and interactive inference
+- **🧠 RAG System**: Complete Retrieval-Augmented Generation pipeline with vector search
+- **🔄 Microservices Architecture**: FastAPI embedding service and Node.js orchestrator
+- **📊 Vector Database**: MongoDB Atlas with vector search capabilities
+- **📏 Multi-Vector Similarity**: Support for both cosine similarity and dot product similarity metrics
+- **🐳 Containerized Deployment**: Docker Compose setup for easy deployment
+- **🚀 CI/CD Pipeline**: GitHub Actions workflow with automated testing and Docker builds
+- **📈 Monitoring & Metrics**: Prometheus metrics integration for both services
+- **🎨 React Demo UI**: Interactive web interface for testing the RAG system
+- **🧪 Comprehensive Testing**: Unit tests, multi-vector similarity tests, and performance benchmarks
+- **🔑 API Integration**: OpenAI API for embeddings and chat completions
+- **☁️ AWS Deployment Guide**: Complete migration guide for AWS Lambda, ECS, EC2, and SageMaker
+
+## 🆕 New Advanced Features
+
+### 1. **Multi-Vector Similarity Support**
+- Configurable similarity metrics: cosine similarity and dot product
+- API parameter: `similarity_metric` in chat requests
+- Performance comparison tools included
+
+### 2. **CI/CD Pipeline**
+- GitHub Actions workflow with multi-stage pipeline
+- Automated linting, testing, and Docker image building
+- Security scanning with Trivy
+- Automated deployment capabilities
+
+### 3. **Monitoring & Metrics**
+- Prometheus metrics for both Python and Node.js services
+- Request latency, error counts, and custom metrics
+- `/metrics` endpoints for both services
+- Ready for Grafana dashboard integration
+
+### 4. **React Demo UI**
+- Modern, responsive web interface
+- Real-time chat functionality
+- Source document display with scores
+- Similarity metric selection
+- Performance timing display
+
+### 5. **Comprehensive Testing**
+- Python unit tests with pytest
+- Node.js tests with Jest
+- Multi-vector similarity testing script
+- Automated test execution in CI/CD
