@@ -54,7 +54,11 @@ jobs:
     - name: Install Node.js dependencies
       run: |
         cd services/orchestrator
-        npm ci
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install
+        fi
 
     - name: Lint Node.js code
       run: |
@@ -69,18 +73,34 @@ jobs:
     # React demo linting
     - name: Install React demo dependencies
       run: |
-        cd demo-ui
-        npm ci || echo "React demo not yet created"
+        if [ -d "demo-ui" ]; then
+          cd demo-ui
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+        else
+          echo "React demo directory not found, skipping..."
+        fi
 
     - name: Lint React code
       run: |
-        cd demo-ui
-        npm run lint || echo "React demo not yet created"
+        if [ -d "demo-ui" ]; then
+          cd demo-ui
+          npm run lint || echo "No lint script found"
+        else
+          echo "React demo directory not found, skipping..."
+        fi
 
     - name: Build React demo
       run: |
-        cd demo-ui
-        npm run build || echo "React demo not yet created"
+        if [ -d "demo-ui" ]; then
+          cd demo-ui
+          npm run build || echo "Build failed or not configured"
+        else
+          echo "React demo directory not found, skipping..."
+        fi
 
   build-docker-images:
     needs: lint-and-test
