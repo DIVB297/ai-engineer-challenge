@@ -51,7 +51,7 @@ def test_similarity_metrics(base_url="http://localhost:5000"):
 
             # Show top scores
             for i, doc in enumerate(cosine_data.get("source_docs", [])[:3]):
-                print(f"   Score #{i+1}: {doc.get('score', 0):.4f}")
+                print(f"   Score #{i + 1}: {doc.get('score', 0):.4f}")
         else:
             print(f"❌ Failed with status: {cosine_response.status_code}")
             return
@@ -87,7 +87,7 @@ def test_similarity_metrics(base_url="http://localhost:5000"):
 
             # Show top scores
             for i, doc in enumerate(dot_data.get("source_docs", [])[:3]):
-                print(f"   Score #{i+1}: {doc.get('score', 0):.4f}")
+                print(f"   Score #{i + 1}: {doc.get('score', 0):.4f}")
         else:
             print(f"❌ Failed with status: {dot_response.status_code}")
             return
@@ -144,7 +144,7 @@ def test_direct_embedding_service(base_url="http://localhost:8000"):
                 print(f"   Results: {len(data.get('results', []))}")
 
                 for i, result in enumerate(data.get("results", [])[:2]):
-                    print(f"   Result #{i+1}: score={result.get('score', 0):.4f}")
+                    print(f"   Result #{i + 1}: score={result.get('score', 0):.4f}")
             else:
                 print(f"❌ Failed: {response.status_code}")
 

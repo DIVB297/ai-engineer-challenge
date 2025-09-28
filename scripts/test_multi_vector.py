@@ -233,7 +233,7 @@ async def main():
         score_analysis = summary.get("score_analysis", {})
         avg_diffs = score_analysis.get("avg_score_differences", [])
         if avg_diffs:
-            print(f"Average score difference: {sum(avg_diffs)/len(avg_diffs):.4f}")
+            print(f"Average score difference: {sum(avg_diffs) / len(avg_diffs):.4f}")
 
     print(f"\nDetailed results saved to: {results_file}")
     print("=" * 80)

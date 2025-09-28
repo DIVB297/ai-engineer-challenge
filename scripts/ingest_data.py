@@ -283,7 +283,7 @@ class DataIngester:
                     print(f"Processed batch {successful_batches} ({len(batch)} chunks)")
 
                 except Exception as e:
-                    print(f"Error processing batch {i//batch_size + 1}: {e}")
+                    print(f"Error processing batch {i // batch_size + 1}: {e}")
 
         # Save processed hashes
         self.save_processed_hashes()
