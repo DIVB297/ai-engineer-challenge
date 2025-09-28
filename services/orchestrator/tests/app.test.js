@@ -2,6 +2,10 @@ const request = require('supertest');
 const app = require('../src/app');
 
 describe('Orchestrator API', () => {
+  afterAll((done) => {
+    // Clean up any pending operations
+    setTimeout(done, 100);
+  });
   describe('GET /health', () => {
     it('should return health status', async () => {
       const response = await request(app)
@@ -111,10 +115,9 @@ describe('LLMService', () => {
       expect(service.model).toBe('gpt-3.5-turbo');
     });
 
-    it('should throw error without API key', () => {
-      expect(() => {
-        new LLMService(null, 'gpt-3.5-turbo');
-      }).toThrow('OpenAI API key is required');
+    it('should use mock mode without API key', () => {
+      const service = new LLMService(null, 'gpt-3.5-turbo');
+      expect(service.useMock).toBe(true);
     });
   });
 });

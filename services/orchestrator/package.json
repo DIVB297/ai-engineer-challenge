@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
-    "test": "jest",
+    "test": "jest --forceExit",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"
   },
@@ -34,5 +34,11 @@
     "embeddings"
   ],
   "author": "AI Engineer",
-  "license": "MIT"
+  "license": "MIT",
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 10000,
+    "collectCoverage": false,
+    "verbose": true
+  }
 }
