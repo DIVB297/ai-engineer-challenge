@@ -9,7 +9,11 @@ RUN mkdir -p logs
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --omit=dev
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev; \
+    else \
+      npm install --only=production; \
+    fi
 
 # Copy application code
 COPY . .

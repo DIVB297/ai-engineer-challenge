@@ -92,3 +92,5 @@ tmp/
 temp/
 *.tmp
 *.temp
+processed_docs.json
+toy_qa_lora_model/

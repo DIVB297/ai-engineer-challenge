@@ -178,6 +178,8 @@ npm start
 
 ## 📚 API Specifications
 
+> 📋 **Complete API Reference**: For detailed curl commands and examples, see [API_REFERENCE.md](docs/API_REFERENCE.md)
+
 ### Embedding Service (Port 8000)
 
 #### 🔍 Health Check
@@ -311,6 +313,37 @@ Content-Type: application/json
   },
   "timestamp": "2025-09-28T10:30:15.000Z"
 }
+
+## 🚀 Quick Commands Reference
+
+### Essential Curl Commands (Copy & Paste Ready)
+
+```bash
+# Start services
+docker-compose up -d
+
+# Health checks
+curl http://localhost:8000/health  # Embedding service
+curl http://localhost:5000/health  # Orchestrator
+
+# Ingest data
+python scripts/ingest_data.py data/sample_documents.json --type json
+
+# RAG Chat (Cosine similarity)
+curl -X POST "http://localhost:5000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "test_user", "query": "What is machine learning?", "k": 3, "similarity_metric": "cosine"}'
+
+# RAG Chat (Dot product similarity)  
+curl -X POST "http://localhost:5000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "test_user", "query": "What is machine learning?", "k": 3, "similarity_metric": "dot_product"}'
+
+# Direct vector search
+curl "http://localhost:8000/search?query=machine%20learning&k=3&similarity_metric=cosine"
+```
+
+> 📋 **Full API Documentation**: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) - Complete curl commands, parameters, and response formats
 
 ## 🎬 Demo Script
 
