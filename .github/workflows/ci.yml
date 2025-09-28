@@ -39,11 +39,11 @@ jobs:
     - name: Lint Python code
       run: |
         # Black formatting check
-        black --check services/embedding_service/ scripts/
-        # Import sorting check
-        isort --check-only services/embedding_service/ scripts/
-        # Flake8 linting
-        flake8 services/embedding_service/ scripts/ --max-line-length=100
+        black --check --line-length=100 services/embedding_service/ scripts/
+        # Import sorting check (compatible with Black)
+        isort --check-only --profile=black services/embedding_service/ scripts/
+        # Flake8 linting (ignore E203 due to Black conflict)
+        flake8 services/embedding_service/ scripts/ --max-line-length=100 --extend-ignore=E203
 
     - name: Run Python tests
       run: |

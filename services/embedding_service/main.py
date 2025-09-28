@@ -1,34 +1,40 @@
+import logging
 import os
 import time
-import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Depends, Request
-from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-from starlette.responses import Response
-from dotenv import load_dotenv
 
-from models import EmbedRequest, BulkEmbedRequest, EmbedResponse, BulkEmbedResponse, HealthResponse
+from dotenv import load_dotenv
 from embedding_service import EmbeddingServiceFactory
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from models import (
+    BulkEmbedRequest,
+    BulkEmbedResponse,
+    EmbedRequest,
+    EmbedResponse,
+    HealthResponse,
+)
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from starlette.responses import Response
 from vector_store import VectorStore
 
 # Prometheus metrics
 REQUEST_COUNT = Counter(
-    'embedding_service_requests_total', 
-    'Total requests to embedding service',
-    ['method', 'endpoint', 'status']
+    "embedding_service_requests_total",
+    "Total requests to embedding service",
+    ["method", "endpoint", "status"],
 )
 
 REQUEST_LATENCY = Histogram(
-    'embedding_service_request_duration_seconds',
-    'Request latency in seconds',
-    ['method', 'endpoint']
+    "embedding_service_request_duration_seconds",
+    "Request latency in seconds",
+    ["method", "endpoint"],
 )
 
 ERROR_COUNT = Counter(
-    'embedding_service_errors_total',
-    'Total errors in embedding service',
-    ['endpoint', 'error_type']
+    "embedding_service_errors_total",
+    "Total errors in embedding service",
+    ["endpoint", "error_type"],
 )
 
 # Load environment variables
@@ -42,45 +48,47 @@ logger = logging.getLogger(__name__)
 embedding_service = None
 vector_store = None
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     global embedding_service, vector_store
-    
+
     # Initialize embedding service
     openai_api_key = os.getenv("OPENAI_API_KEY")
-    
-    embedding_service = EmbeddingServiceFactory.create_service(
-        openai_api_key=openai_api_key
-    )
-    
+
+    embedding_service = EmbeddingServiceFactory.create_service(openai_api_key=openai_api_key)
+
     # Initialize vector store
     mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
     mongodb_database = os.getenv("MONGODB_DATABASE", "rag_system")
     mongodb_collection = os.getenv("MONGODB_COLLECTION", "embeddings")
-    
+
     vector_store = VectorStore(mongodb_uri, mongodb_database, mongodb_collection)
-    
+
     try:
         await vector_store.initialize()
         logger.info("Services initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize services: {e}")
         raise
-    
+
     yield
-    
+
     # Shutdown
     if vector_store:
         await vector_store.close()
     logger.info("Services shut down successfully")
 
+
 # Create FastAPI app
 app = FastAPI(
     title="RAG Embedding Service",
-    description="Embedding service for RAG system using MongoDB Atlas Vector Search with cosine similarity",
+    description=(
+        "Embedding service for RAG system using MongoDB Atlas Vector Search with cosine similarity"
+    ),
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -92,137 +100,119 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Metrics middleware
 @app.middleware("http")
 async def metrics_middleware(request: Request, call_next):
     start_time = time.time()
-    
+
     # Process request
     response = await call_next(request)
-    
+
     # Record metrics
     process_time = time.time() - start_time
-    REQUEST_LATENCY.labels(
-        method=request.method,
-        endpoint=request.url.path
-    ).observe(process_time)
-    
+    REQUEST_LATENCY.labels(method=request.method, endpoint=request.url.path).observe(process_time)
+
     REQUEST_COUNT.labels(
-        method=request.method,
-        endpoint=request.url.path,
-        status=response.status_code
+        method=request.method, endpoint=request.url.path, status=response.status_code
     ).inc()
-    
+
     return response
+
 
 def get_embedding_service():
     return embedding_service
 
+
 def get_vector_store():
     return vector_store
+
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
-    return HealthResponse(
-        status="healthy",
-        service="embedding_service",
-        version="1.0.0"
-    )
+    return HealthResponse(status="healthy", service="embedding_service", version="1.0.0")
+
 
 @app.get("/metrics")
 async def get_metrics():
     """Prometheus metrics endpoint"""
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
+
 @app.post("/embed", response_model=EmbedResponse)
 async def embed_document(
     request: EmbedRequest,
     embed_service=Depends(get_embedding_service),
-    store=Depends(get_vector_store)
+    store=Depends(get_vector_store),
 ):
     """Generate embedding for a single document and store it"""
     try:
         start_time = time.time()
-        
+
         # Generate embedding
         embedding = await embed_service.get_embedding(request.text)
-        
+
         # Store in vector database
-        await store.upsert_embedding(
-            doc_id=request.id,
-            text=request.text,
-            embedding=embedding
-        )
-        
+        await store.upsert_embedding(doc_id=request.id, text=request.text, embedding=embedding)
+
         processing_time = time.time() - start_time
         logger.info(f"Processed document {request.id} in {processing_time:.3f}s")
-        
-        return EmbedResponse(
-            id=request.id,
-            embedding=embedding,
-            dimension=len(embedding)
-        )
-        
+
+        return EmbedResponse(id=request.id, embedding=embedding, dimension=len(embedding))
+
     except Exception as e:
         ERROR_COUNT.labels(endpoint="/embed", error_type=type(e).__name__).inc()
         logger.error(f"Error processing document {request.id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/bulk_embed", response_model=BulkEmbedResponse)
 async def bulk_embed_documents(
     request: BulkEmbedRequest,
     embed_service=Depends(get_embedding_service),
-    store=Depends(get_vector_store)
+    store=Depends(get_vector_store),
 ):
     """Generate embeddings for multiple documents and store them"""
     try:
         start_time = time.time()
-        
+
         # Extract texts and IDs
         texts = [doc.text for doc in request.documents]
-        doc_ids = [doc.id for doc in request.documents]
-        
+        [doc.id for doc in request.documents]
+
         # Generate embeddings in batch
         embeddings = await embed_service.get_embeddings_batch(texts)
-        
+
         # Prepare documents for bulk insert
         documents = []
         results = []
-        
+
         for i, (doc, embedding) in enumerate(zip(request.documents, embeddings)):
-            documents.append({
-                "id": doc.id,
-                "text": doc.text,
-                "embedding": embedding
-            })
-            
-            results.append(EmbedResponse(
-                id=doc.id,
-                embedding=embedding,
-                dimension=len(embedding)
-            ))
-        
+            documents.append({"id": doc.id, "text": doc.text, "embedding": embedding})
+
+            results.append(EmbedResponse(id=doc.id, embedding=embedding, dimension=len(embedding)))
+
         # Bulk insert into vector store
         try:
             processed_count = await store.upsert_embeddings_batch(documents)
         except Exception as store_error:
             logger.error(f"Error storing embeddings: {store_error}")
-            raise HTTPException(status_code=500, detail="Failed to store embeddings in vector database")
-        
+            raise HTTPException(
+                status_code=500, detail="Failed to store embeddings in vector database"
+            )
+
         processing_time = time.time() - start_time
         logger.info(f"Bulk processed {len(request.documents)} documents in {processing_time:.3f}s")
-        
-        return BulkEmbedResponse(
-            processed=processed_count,
-            results=results
-        )
-        
+
+        return BulkEmbedResponse(processed=processed_count, results=results)
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error in bulk processing: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during bulk processing")
+
 
 @app.get("/search")
 async def search_similar_documents(
@@ -230,44 +220,47 @@ async def search_similar_documents(
     k: int = 5,
     similarity_metric: str = "cosine",
     embed_service=Depends(get_embedding_service),
-    store=Depends(get_vector_store)
+    store=Depends(get_vector_store),
 ):
     """Search for similar documents using vector similarity"""
     try:
         start_time = time.time()
-        
+
         # Validate similarity metric
         if similarity_metric not in ["cosine", "dot_product"]:
             raise HTTPException(
-                status_code=400, 
-                detail="similarity_metric must be 'cosine' or 'dot_product'"
+                status_code=400,
+                detail="similarity_metric must be 'cosine' or 'dot_product'",
             )
-        
+
         # Generate query embedding
         query_embedding = await embed_service.get_embedding(query)
-        
+
         # Perform similarity search
         results = await store.similarity_search(
-            query_embedding, 
-            k=k, 
-            similarity_metric=similarity_metric
+            query_embedding, k=k, similarity_metric=similarity_metric
         )
-        
+
         processing_time = time.time() - start_time
-        logger.info(f"Search completed with {similarity_metric} in {processing_time:.3f}s, found {len(results)} results")
-        
+        logger.info(
+            f"Search completed with {similarity_metric} in {processing_time:.3f}s, "
+            f"found {len(results)} results"
+        )
+
         return {
             "query": query,
             "similarity_metric": similarity_metric,
             "results": results,
-            "processing_time_ms": processing_time * 1000
+            "processing_time_ms": processing_time * 1000,
         }
-        
+
     except Exception as e:
         logger.error(f"Error in search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 if __name__ == "__main__":
     import uvicorn
+
     port = int(os.getenv("EMBEDDING_SERVICE_PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
