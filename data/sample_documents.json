@@ -1,0 +1,182 @@
+[
+  {
+    "id": "ai_intro_1",
+    "text": "Artificial Intelligence (AI) is a branch of computer science that aims to create intelligent machines that can perform tasks that typically require human intelligence. These tasks include learning, reasoning, problem-solving, perception, and language understanding. AI systems can be categorized into narrow AI, which is designed for specific tasks, and general AI, which would have human-like cognitive abilities across multiple domains.",
+    "metadata": {
+      "category": "AI Fundamentals",
+      "topic": "Introduction to AI",
+      "difficulty": "beginner"
+    }
+  },
+  {
+    "id": "ml_basics_1",
+    "text": "Machine Learning is a subset of AI that enables computers to learn and make decisions from data without being explicitly programmed for every scenario. It involves algorithms that can identify patterns in data and make predictions or decisions based on those patterns. The three main types of machine learning are supervised learning, unsupervised learning, and reinforcement learning.",
+    "metadata": {
+      "category": "Machine Learning",
+      "topic": "ML Basics",
+      "difficulty": "beginner"
+    }
+  },
+  {
+    "id": "deep_learning_1",
+    "text": "Deep Learning is a specialized subset of machine learning that uses artificial neural networks with multiple layers (hence 'deep') to model and understand complex patterns in data. These networks are inspired by the structure and function of the human brain. Deep learning has been particularly successful in areas such as image recognition, natural language processing, and speech recognition.",
+    "metadata": {
+      "category": "Deep Learning",
+      "topic": "Neural Networks",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "id": "nlp_overview_1",
+    "text": "Natural Language Processing (NLP) is a field of AI that focuses on the interaction between computers and humans through natural language. It involves developing algorithms and models that can understand, interpret, and generate human language in a valuable way. Common NLP tasks include sentiment analysis, machine translation, text summarization, and question answering.",
+    "metadata": {
+      "category": "NLP",
+      "topic": "Language Processing",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "id": "supervised_learning_1",
+    "text": "Supervised learning is a machine learning approach where the algorithm learns from labeled training data. In supervised learning, each training example consists of an input and the corresponding correct output. The goal is to learn a mapping function from inputs to outputs so that the model can make accurate predictions on new, unseen data. Common examples include classification and regression tasks.",
+    "metadata": {
+      "category": "Machine Learning",
+      "topic": "Supervised Learning",
+      "difficulty": "beginner"
+    }
+  },
+  {
+    "id": "unsupervised_learning_1",
+    "text": "Unsupervised learning is a type of machine learning where the algorithm learns patterns from data without labeled examples. The system tries to find hidden structures in input data without any guidance about what the output should be. Common unsupervised learning techniques include clustering, dimensionality reduction, and association rule learning.",
+    "metadata": {
+      "category": "Machine Learning",
+      "topic": "Unsupervised Learning",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "id": "reinforcement_learning_1",
+    "text": "Reinforcement Learning (RL) is a type of machine learning where an agent learns to make decisions by taking actions in an environment to maximize cumulative reward. The agent learns through trial and error, receiving feedback in the form of rewards or penalties. RL has been successfully applied to game playing, robotics, and autonomous systems.",
+    "metadata": {
+      "category": "Machine Learning",
+      "topic": "Reinforcement Learning",
+      "difficulty": "advanced"
+    }
+  },
+  {
+    "id": "neural_networks_1",
+    "text": "Neural Networks are computing systems inspired by biological neural networks. They consist of interconnected nodes (neurons) organized in layers. Each connection has a weight that adjusts as learning proceeds. Neural networks can learn complex patterns and relationships in data through a process called backpropagation, where errors are propagated backward through the network to update weights.",
+    "metadata": {
+      "category": "Deep Learning",
+      "topic": "Neural Network Architecture",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "id": "transformers_1",
+    "text": "Transformers are a type of neural network architecture that has revolutionized natural language processing. They use self-attention mechanisms to process sequential data more efficiently than traditional recurrent neural networks. Transformers form the backbone of large language models like GPT, BERT, and T5, enabling breakthrough performance in various NLP tasks.",
+    "metadata": {
+      "category": "NLP",
+      "topic": "Transformer Architecture",
+      "difficulty": "advanced"
+    }
+  },
+  {
+    "id": "computer_vision_1",
+    "text": "Computer Vision is a field of AI that enables machines to interpret and understand visual information from the world. It involves developing algorithms that can process, analyze, and understand images and videos. Applications include object detection, facial recognition, medical image analysis, and autonomous vehicle navigation.",
+    "metadata": {
+      "category": "Computer Vision",
+      "topic": "Image Processing",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "id": "data_preprocessing_1",
+    "text": "Data preprocessing is a crucial step in machine learning that involves cleaning, transforming, and organizing raw data before feeding it to ML algorithms. This includes handling missing values, removing outliers, normalizing data, encoding categorical variables, and feature selection. Good data preprocessing can significantly improve model performance.",
+    "metadata": {
+      "category": "Data Science",
+      "topic": "Data Preparation",
+      "difficulty": "beginner"
+    }
+  },
+  {
+    "id": "overfitting_1",
+    "text": "Overfitting occurs when a machine learning model learns the training data too well, including noise and irrelevant patterns, leading to poor performance on new, unseen data. Signs of overfitting include high training accuracy but low validation accuracy. Techniques to prevent overfitting include regularization, cross-validation, early stopping, and using more training data.",
+    "metadata": {
+      "category": "Machine Learning",
+      "topic": "Model Evaluation",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "id": "feature_engineering_1",
+    "text": "Feature engineering is the process of selecting, modifying, or creating new features from raw data to improve machine learning model performance. It involves understanding the domain, identifying relevant features, creating new features through combinations or transformations, and selecting the most important features for the model.",
+    "metadata": {
+      "category": "Data Science",
+      "topic": "Feature Engineering",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "id": "cross_validation_1",
+    "text": "Cross-validation is a technique used to assess how well a machine learning model will generalize to an independent dataset. The most common method is k-fold cross-validation, where the dataset is divided into k subsets, and the model is trained on k-1 subsets while being tested on the remaining subset. This process is repeated k times.",
+    "metadata": {
+      "category": "Machine Learning",
+      "topic": "Model Validation",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "id": "gradient_descent_1",
+    "text": "Gradient descent is an optimization algorithm used to minimize the cost function in machine learning models. It works by iteratively moving in the direction of the steepest descent (negative gradient) to find the minimum of the function. Variants include batch gradient descent, stochastic gradient descent, and mini-batch gradient descent.",
+    "metadata": {
+      "category": "Machine Learning",
+      "topic": "Optimization",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "id": "clustering_1",
+    "text": "Clustering is an unsupervised learning technique that groups similar data points together based on their characteristics. Common clustering algorithms include K-means, hierarchical clustering, and DBSCAN. Clustering is used for customer segmentation, image segmentation, and data exploration.",
+    "metadata": {
+      "category": "Machine Learning",
+      "topic": "Clustering",
+      "difficulty": "beginner"
+    }
+  },
+  {
+    "id": "bias_variance_1",
+    "text": "The bias-variance tradeoff is a fundamental concept in machine learning that describes the relationship between model complexity and generalization ability. Bias refers to errors from overly simplistic assumptions, while variance refers to errors from sensitivity to small fluctuations in the training set. The goal is to find the right balance to minimize total error.",
+    "metadata": {
+      "category": "Machine Learning",
+      "topic": "Model Selection",
+      "difficulty": "advanced"
+    }
+  },
+  {
+    "id": "ensemble_methods_1",
+    "text": "Ensemble methods combine multiple machine learning models to create a stronger predictor than any individual model. Popular ensemble techniques include bagging (like Random Forest), boosting (like AdaBoost and XGBoost), and stacking. These methods can reduce overfitting, improve accuracy, and provide more robust predictions.",
+    "metadata": {
+      "category": "Machine Learning",
+      "topic": "Ensemble Learning",
+      "difficulty": "advanced"
+    }
+  },
+  {
+    "id": "ethics_ai_1",
+    "text": "AI Ethics involves the moral principles and values that guide the development and deployment of artificial intelligence systems. Key considerations include fairness, accountability, transparency, privacy, and the potential impact on society. As AI systems become more prevalent, ensuring they are developed and used responsibly becomes increasingly important.",
+    "metadata": {
+      "category": "AI Ethics",
+      "topic": "Responsible AI",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "id": "model_deployment_1",
+    "text": "Model deployment is the process of integrating a trained machine learning model into a production environment where it can make predictions on new data. This involves considerations such as scalability, latency, monitoring, versioning, and maintaining model performance over time. Common deployment strategies include batch processing, real-time APIs, and edge deployment.",
+    "metadata": {
+      "category": "MLOps",
+      "topic": "Model Deployment",
+      "difficulty": "advanced"
+    }
+  }
+]
